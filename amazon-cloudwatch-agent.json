@@ -1,0 +1,62 @@
+{
+	"logs": {
+		"logs_collected": {
+                        "files": {
+                          "collect_list": [
+                            {
+                              "file_path": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
+                              "log_group_name": "var_dealer_ou",
+                              "timezone": "UTC"
+                            }
+                          ]
+                        },
+			"windows_events": {
+				"collect_list": [
+					{
+						"event_format": "text",
+						"event_levels": [
+							"WARNING",
+							"ERROR",
+							"CRITICAL"
+						],
+						"event_name": "System",
+						"log_group_name": "var_dealer_ou",
+						"log_stream_name": "{local_hostname}/System"
+					}
+				]
+			}
+		}
+	},
+	"metrics": {
+	    "namespace": "var_instance_hostname",
+		"metrics_collected": {
+			"LogicalDisk": {
+				"measurement": [
+                                  {"name": "% Free Space", "rename": "FREE_SPACE", "unit": "Percent"}
+				],
+				"metrics_collection_interval": 60,
+				"resources": [
+					"*"
+				]
+			},
+			"Memory": {
+				"measurement": [
+                                  "% Committed Bytes In Use"
+				],
+				"metrics_collection_interval": 60
+			},
+			"Processor": {
+				"measurement": [
+                                  {"name": "% Processor Time", "rename": "CPU_BUSY", "unit": "Percent"}
+				],
+				"metrics_collection_interval": 60,
+				"resources": [
+					"_Total"
+				]
+			}
+		},
+            "append_dimensions": {
+              "InstanceId": "${aws:InstanceId}"
+            }
+	}
+}
