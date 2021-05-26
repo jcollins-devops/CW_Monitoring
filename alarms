@@ -1,0 +1,193 @@
+Parameters:
+
+  DealerCI:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: '/ddhc/dealer/CI'
+  SNSTopicArnHigh:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: '/ddhc/ServiceNow/SNS/HIGH-DOWN'
+  SNSTopicArnLow:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: '/ddhc/ServiceNow/SNS/LOW-IMPAIRED'
+  InstanceHostname:
+    Type: String
+   
+
+Resources:
+  SystemStatusAlarmCRITICAL:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname} -Instance recovery process has been triggered because of failed System Status Check"
+      AlarmDescription: !Ref DealerCI
+      Namespace: 'AWS/EC2'
+      MetricName: StatusCheckFailed_System
+      Statistic: Sum
+      Period: '60'
+      EvaluationPeriods: '1'
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: breaching
+      Threshold: '1'
+      AlarmActions:
+      - !Ref SNSTopicArnHigh
+      OKActions:
+      - !Ref SNSTopicArnHigh
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+
+  InstanceStatusAlarmCRITICAL:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname} -Instance Status Check Failed - please investigate. Troubleshooting: https://goo.gl/Ea27Gd"
+      AlarmDescription: !Ref DealerCI
+      Namespace: 'AWS/EC2'
+      MetricName: StatusCheckFailed_Instance
+      Statistic: Sum
+      Period: '60'
+      EvaluationPeriods: '1'
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: breaching
+      Threshold: '1'
+      AlarmActions:
+      - !Ref SNSTopicArnHigh
+      OKActions:
+      - !Ref SNSTopicArnHigh
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+
+  CPUAlarmWARNING:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname} - High CPU Usage 90%"
+      AlarmDescription: !Ref DealerCI
+      AlarmActions:
+      - !Ref SNSTopicArnLow
+      OKActions:
+      - !Ref SNSTopicArnLow
+      MetricName: CPUUtilization
+      Namespace: 'AWS/EC2'
+      Statistic: Average
+      Period: '900'
+      EvaluationPeriods: '1'
+      Threshold: '90'
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+
+  CPUAlarmCRITICAL:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname} - High CPU Usage 95%"
+      AlarmDescription: !Ref DealerCI
+      AlarmActions:
+      - !Ref SNSTopicArnHigh
+      OKActions:
+      - !Ref SNSTopicArnHigh
+      MetricName: CPUUtilization
+      Namespace: 'AWS/EC2'
+      Statistic: Average
+      Period: '900'
+      EvaluationPeriods: '1'
+      Threshold: '95'
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+
+  MemoryAlarmWARNING:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname} - High Memory Usage -WARNING"
+      AlarmDescription: !Ref DealerCI
+      AlarmActions:
+      - !Ref SNSTopicArnLow
+      OKActions:
+      - !Ref SNSTopicArnLow
+      MetricName: "Memory % Committed Bytes In Use"
+      Namespace: !Sub "${InstanceHostname}"
+      Statistic: Maximum
+      Period: '60'  
+      EvaluationPeriods: '3'  
+      DatapointsToAlarm: '2'  
+      Threshold: '65'
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+      - Name: objectname
+        Value: Memory
+
+  MemoryAlarmCRITICAL:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname}- High Memory Usage CRITICAL"
+      AlarmDescription: !Ref DealerCI
+      AlarmActions:
+      - !Ref SNSTopicArnHigh
+      OKActions:
+      - !Ref SNSTopicArnHigh
+      MetricName: "Memory % Committed Bytes In Use"
+      Namespace: !Sub "${InstanceHostname}"
+      Statistic: Maximum
+      Period: '60'
+      EvaluationPeriods: '3'
+      DatapointsToAlarm: '2' 
+      Threshold: '75'
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+      - Name: objectname
+        Value: Memory
+
+  
+  DiskSpaceAlarmWarning:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname} - over 90% of Drive C space is in use"
+      AlarmDescription: !Ref DealerCI
+      AlarmActions: 
+      - !Ref SNSTopicArnLow
+      OKActions: 
+      - !Ref SNSTopicArnLow
+      MetricName: "FREE_SPACE"
+      Namespace: !Sub "${InstanceHostname}"
+      Statistic: Minimum
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '10'
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+      - Name: objectname
+        Value: LogicalDisk
+      - Name: instance
+        Value: "C:"
+
+  DiskSpaceAlarmCRITICAL:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${InstanceHostname} - over 95% of Drive C space is in use"
+      AlarmDescription: !Ref DealerCI
+      AlarmActions:
+      - !Ref SNSTopicArnHigh
+      OKActions:
+      - !Ref SNSTopicArnHigh
+      MetricName: "FREE_SPACE"
+      Namespace: !Sub "${InstanceHostname}"
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '5'
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+      - Name: InstanceId
+        Value: {"Fn::ImportValue" : {"Fn::Sub" : "${InstanceHostname}-InstanceId"}}
+      - Name: objectname
+        Value: LogicalDisk
+      - Name: instance
+        Value: "C:"
+
